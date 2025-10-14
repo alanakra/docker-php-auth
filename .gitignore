@@ -1,0 +1,5 @@
+.DS_Store
+.env
+._*
+node_modules
+vendor
