@@ -20,16 +20,24 @@
         $password = $_POST['upassword'];
 
         if (!empty($name) && !empty($password)) {
-            $mdp_hash = password_hash($password, PASSWORD_DEFAULT);
+            $check_stmt = $pdo->prepare("SELECT COUNT(*) FROM users_2 WHERE username = :uname");
+            $check_stmt->execute([':uname' => $name]);
+            $user_exists = $check_stmt->fetchColumn();
             
-            $stmt = $pdo->prepare("INSERT INTO users (username, hash_password) VALUES (:uname, :upassword)");
-            $stmt->execute([
-                ':uname' => $name,
-                ':upassword' => $mdp_hash
-            ]);
+            if ($user_exists > 0) {
+                echo "Erreur : Ce nom d'utilisateur existe déjà.";
+            } else {
+                $mdp_hash = password_hash($password, PASSWORD_DEFAULT);
+                
+                $stmt = $pdo->prepare("INSERT INTO users_2 (username, hash_password) VALUES (:uname, :upassword)");
+                $stmt->execute([
+                    ':uname' => $name,
+                    ':upassword' => $mdp_hash
+                ]);
 
-            echo "✅ Utilisateur créé avec succès.";
+                echo "Utilisateur créé avec succès.";
+            }
         } else {
-            echo "⚠️ Merci de remplir tous les champs.";
+            echo "Merci de remplir tous les champs.";
         }
     }
