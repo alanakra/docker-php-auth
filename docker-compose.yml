@@ -1,7 +1,6 @@
 services:
     php:
       build: .
-      image: php:fpm
       volumes:
         - ./www:/var/www/html
 
