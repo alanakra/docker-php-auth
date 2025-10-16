@@ -1,5 +1,6 @@
 <?php
     require_once __DIR__ . '/vendor/autoload.php';
+    header("Access-Control-Allow-Origin: *");
     $dotenv = Dotenv\Dotenv::createImmutable(__DIR__);
     $dotenv->load();
     try {
@@ -8,7 +9,6 @@
             echo 'ERROR : Method not supported (' . $_SERVER['REQUEST_METHOD'] . ')';
             exit();
         }
-
         $userLanguage = $_POST['language'];
         $logNewUser = $_POST['logNewUser'];
         

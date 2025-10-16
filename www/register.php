@@ -1,5 +1,6 @@
 <?php
     require_once __DIR__ . '/vendor/autoload.php';
+    header("Access-Control-Allow-Origin: *");
     $dotenv = Dotenv\Dotenv::createImmutable(__DIR__);
     $dotenv->load();
 
