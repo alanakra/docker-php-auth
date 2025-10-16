@@ -17,10 +17,10 @@
     }
 
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-        $name = trim($_POST['uname']);
-        $password = $_POST['upassword'];
-
-        if (!empty($name) && !empty($password)) {
+        $name = trim($_POST['uname'] ?? '');
+        $password = $_POST['upassword'] ?? '';
+        
+        if (!empty($name) && !empty($password) && strlen($name) > 0 && strlen($password) > 0) {
             $check_stmt = $pdo->prepare("SELECT COUNT(*) FROM users_2 WHERE username = :uname");
             $check_stmt->execute([':uname' => $name]);
             $user_exists = $check_stmt->fetchColumn();
@@ -39,6 +39,14 @@
                 echo "Utilisateur créé avec succès.";
             }
         } else {
-            echo "Merci de remplir tous les champs.";
+            $errors = [];
+            if (empty($name) || strlen($name) == 0) {
+                $errors[] = "Le nom d'utilisateur est requis";
+            }
+            if (empty($password) || strlen($password) == 0) {
+                $errors[] = "Le mot de passe est requis";
+            }
+            http_response_code(400);
+            echo "Erreur : " . implode(", ", $errors) . ".";
         }
     }
