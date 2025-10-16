@@ -26,7 +26,7 @@
             $user_exists = $check_stmt->fetchColumn();
             
             if ($user_exists > 0) {
-                echo "Erreur : Ce nom d'utilisateur existe déjà.";
+                echo "Erreur : This username already exists.";
             } else {
                 $mdp_hash = password_hash($password, PASSWORD_DEFAULT);
                 
@@ -36,17 +36,17 @@
                     ':upassword' => $mdp_hash
                 ]);
 
-                echo "Utilisateur créé avec succès.";
+                echo "User created successfully.";
             }
         } else {
             $errors = [];
             if (empty($name) || strlen($name) == 0) {
-                $errors[] = "Le nom d'utilisateur est requis";
+                $errors[] = "Username is required";
             }
             if (empty($password) || strlen($password) == 0) {
-                $errors[] = "Le mot de passe est requis";
+                $errors[] = "Password is required";
             }
             http_response_code(400);
-            echo "Erreur : " . implode(", ", $errors) . ".";
+            echo "Error: " . implode(", ", $errors) . ".";
         }
     }
