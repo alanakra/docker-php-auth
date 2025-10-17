@@ -1,6 +1,30 @@
 <?php
     require_once __DIR__ . '/vendor/autoload.php';
-    header("Access-Control-Allow-Origin: *");
+    require_once __DIR__ . '/security_utils.php';
+    
+    // Request origin verification
+    $originCheck = SecurityUtils::verifyOrigin(true); // Strict mode enabled
+    
+    if (!$originCheck['allowed']) {
+        // Log unauthorized access attempt
+        SecurityUtils::logUnauthorizedAccess($originCheck);
+        
+        http_response_code(403);
+        header("Content-Type: application/json");
+        echo json_encode([
+            'error' => 'Unauthorized access',
+            'message' => 'This resource is only accessible from authorized domains.',
+            'reason' => $originCheck['reason']
+        ]);
+        exit();
+    }
+    
+    // Set authorized origin in CORS headers
+    header("Access-Control-Allow-Origin: " . $originCheck['origin']);
+    header("Access-Control-Allow-Credentials: true");
+    header("Access-Control-Allow-Methods: POST, OPTIONS");
+    header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
+    
     $dotenv = Dotenv\Dotenv::createImmutable(__DIR__);
     $dotenv->load();
     try {
