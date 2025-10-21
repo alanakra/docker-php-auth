@@ -1,10 +1,27 @@
 <?php
+    // TODO: Include CORS Restriction b4 flight
     require_once __DIR__ . '/vendor/autoload.php';
     use Firebase\JWT\JWT;
     
-    header("Access-Control-Allow-Origin: *");
+    // CORS Configuration for cross domain dev w Client URL list
+    $allowedOrigins = [
+        'http://demo-register-client.local:5173',
+        'http://localhost:5173',
+        'http://127.0.0.1:5173',
+        'http://localhost:3000',
+        'http://127.0.0.1:3000'
+    ];
+    
+    $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+    if (in_array($origin, $allowedOrigins)) {
+        header("Access-Control-Allow-Origin: $origin");
+    } else {
+        header("Access-Control-Allow-Origin: http://demo-register-client.local:5173"); // Fallback during dev
+    }
+    
     header("Access-Control-Allow-Methods: POST, OPTIONS");
     header("Access-Control-Allow-Headers: Content-Type, Authorization");
+    header("Access-Control-Allow-Credentials: true");
     header("Content-Type: application/json");
     
     $dotenv = Dotenv\Dotenv::createImmutable(__DIR__);
@@ -39,7 +56,6 @@
             $user = $stmt->fetch(PDO::FETCH_ASSOC);
             
             if ($user && password_verify($password, $user['hash_password'])) {
-                // Générer un token JWT
                 $jwt_secret = $_ENV['JWT_SECRET'];
                 
                 $payload = [
@@ -50,6 +66,19 @@
                 ];
                 
                 $jwt = JWT::encode($payload, $jwt_secret, 'HS256');
+                
+                // Secured cookie configuration
+                $cookieOptions = [
+                    'expires' => time() + (24 * 60 * 60),
+                    'path' => '/',
+                    'domain' => '',
+                    'secure' => false, // Use HTTP method for development purposes TODO: Use true b4 flight
+                    'httponly' => false, // Enable for localStorage TODO: Maybe set true b4 flight
+                    'samesite' => 'None' // cross-site request for development purpose TODO: Fix b4 flight
+                ];
+                
+                setcookie('auth_token', $jwt, $cookieOptions);
+                
                 echo json_encode([
                     "success" => true,
                     "message" => "Successful login",
@@ -57,14 +86,15 @@
                         "id" => $user['id'],
                         "username" => $user['username']
                     ],
-                    "token" => $jwt,
                     "expires_in" => 24 * 60 * 60, // 24 hours in seconds
+                    "auth_token" => $jwt,
+                    "cookie_set" => true
                 ]);
             } else {
                 http_response_code(401);
                 echo json_encode([
                     "success" => false,
-                    "error" => "uncorrect username or password"
+                    "error" => "incorrect username or password"
                 ]);
             }
         } else {
