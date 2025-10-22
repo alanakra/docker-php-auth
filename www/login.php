@@ -87,7 +87,6 @@
                         "username" => $user['username']
                     ],
                     "expires_in" => 24 * 60 * 60, // 24 hours in seconds
-                    "auth_token" => $jwt,
                     "cookie_set" => true
                 ]);
             } else {
