@@ -59,7 +59,7 @@ To generate JWT secret, run on your terminal `openssl rand -base64 64` or `node 
 For the API and front-end to function properly, and for security reasons, both parties must communicate using the HTTPS protocol. If this is the case, client requests to the server may be blocked by your browser.
 
 #### 2.1 Create self-signed SSL certificate
-At the root the the repo type `mkdir -p sll && cd ssl && openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout demo-register-server.local.key -out demo-register-server.local.crt -subj "/C=FR/ST=France/L=Paris/O=Demo/OU=IT/CN=demo-register-server.local"`
+At the root the the repo type `mkdir -p ssl && cd ssl && openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout demo-register-server.local.key -out demo-register-server.local.crt -subj "/C=FR/ST=France/L=Paris/O=Demo/OU=IT/CN=demo-register-server.local"`
 
 ### 3. Create Docker image
 Run `docker build -t docker-php-auth .`
