@@ -5,8 +5,14 @@ It is designed to communicate securely with an external **API hosted on a differ
 
 ## Environment
 
-- **Front-end:** http://demo-register-client.local:5173  
-- **Back-end (API):** http://demo-register-server.local:8080/
+- **Front-end:** https://demo-register-client.local:5173  
+- **Back-end (API):** https://demo-register-server.local:8080/
+
+Prerequisites
+- Docker and Docker Compose installed
+- openssl installed (check with `openssl version`)
+- Ability to edit your OS hosts file
+- Replace `demo-register-server.local` and `127.0.0.1` with your real hostnames/IPs if required
 
 This architecture is considered **cross-site**, since both the client and server use different hostnames and ports.
 
@@ -45,7 +51,7 @@ MYSQL_PASSWORD=user
 ```
 Theses values are for MYSQL container in `docker-compose.yml` file.
 
-Add a second `.env` file at the root of `www` folder with the following structure:
+Create another second `.env` file at the root of `www` folder with the following structure:
 ```
 DB_HOST=mysql
 DB_USERNAME=user
@@ -58,8 +64,90 @@ To generate JWT secret, run on your terminal `openssl rand -base64 64` or `node 
 ### 2. Enable HTTPS locally
 For the API and front-end to function properly, and for security reasons, both parties must communicate using the HTTPS protocol. If this is the case, client requests to the server may be blocked by your browser.
 
-#### 2.1 Create self-signed SSL certificate
-At the root the the repo type `mkdir -p ssl && cd ssl && openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout demo-register-server.local.key -out demo-register-server.local.crt -subj "/C=FR/ST=France/L=Paris/O=Demo/OU=IT/CN=demo-register-server.local"`
+2.1 Create a self-signed SSL certificate
+
+Linux / WSL / macOS:
+```bash
+mkdir -p ssl && cd ssl
+openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+  -keyout demo-register-server.local.key \
+  -out demo-register-server.local.crt \
+  -subj "/C=FR/ST=France/L=Paris/O=Demo/OU=IT/CN=demo-register-server.local"
+```
+
+Git Bash (MSYS) — avoid automatic path conversion
+MSYS can convert arguments that look like paths (e.g. `/C=FR`) into Windows paths. Disable conversion for the single command with:
+
+```bash
+mkdir -p ssl && cd ssl && MSYS_NO_PATHCONV=1 openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+  -keyout demo-register-server.local.key \
+  -out demo-register-server.local.crt \
+  -subj "/C=FR/ST=France/L=Paris/O=Demo/OU=IT/CN=demo-register-server.local"
+```
+
+To disable conversion for the whole session:
+```bash
+export MSYS_NO_PATHCONV=1
+# run your openssl commands afterwards
+```
+
+PowerShell (Windows)
+Use single quotes to avoid interpolation:
+```powershell
+mkdir ssl; Set-Location ssl
+openssl req -x509 -nodes -days 365 -newkey rsa:2048 `
+  -keyout demo-register-server.local.key `
+  -out demo-register-server.local.crt `
+  -subj '/C=FR/ST=France/L=Paris/O=Demo/OU=IT/CN=demo-register-server.local'
+```
+
+cmd.exe (Windows)
+```cmd
+mkdir ssl && cd ssl
+openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout demo-register-server.local.key -out demo-register-server.local.crt -subj "/C=FR/ST=France/L=Paris/O=Demo/OU=IT/CN=demo-register-server.local"
+```
+
+Recommended variant: include SAN (subjectAltName)
+Modern clients and browsers rely on subjectAltName rather than the CN. If your OpenSSL supports `-addext` (OpenSSL ≥ 1.1.1):
+
+```bash
+mkdir -p ssl && cd ssl && MSYS_NO_PATHCONV=1 openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+  -keyout demo-register-server.local.key \
+  -out demo-register-server.local.crt \
+  -subj "/C=FR/ST=France/L=Paris/O=Demo/OU=IT/CN=demo-register-server.local" \
+  -addext "subjectAltName=DNS:demo-register-server.local,IP:127.0.0.1"
+```
+
+If `-addext` is not available, use a temporary config file (`san.cnf`):
+
+```bash
+cat > san.cnf <<'EOF'
+[ req ]
+distinguished_name = req_distinguished_name
+req_extensions = v3_req
+prompt = no
+
+[ req_distinguished_name ]
+C = FR
+ST = France
+L = Paris
+O = Demo
+OU = IT
+CN = demo-register-server.local
+
+[ v3_req ]
+subjectAltName = @alt_names
+
+[ alt_names ]
+DNS.1 = demo-register-server.local
+IP.1 = 127.0.0.1
+EOF
+
+MSYS_NO_PATHCONV=1 openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+  -keyout demo-register-server.local.key \
+  -out demo-register-server.local.crt \
+  -config san.cnf -extensions v3_req
+```
 
 ### 3. Create Docker image
 Run `docker build -t docker-php-auth .`
@@ -67,10 +155,16 @@ Run `docker build -t docker-php-auth .`
 ### 4. Start containers
 Run `docker compose up -d`
 
-Then go to `http://demo-register-server.local:8080` for API endpoint and `http://demo-register-server.local:8081/` to access to PhpmMyAdmin.
+Access:
+- API: https://demo-register-server.local:8080 (or http if you configured it that way)
+- phpMyAdmin: http://demo-register-server.local:8081/
 
 ### 5. Import database
 Import the following [database](https://gist.github.com/alanakra/4227596bbb85f3745cf97bed5b35d833) and import it via PhpMyAdmin.
 
 ### 6. SSL Certificate Troubleshooting
 For specific issues related to opening the API endpoint link following the self-signed SSL certificate, here is a more detailed troubleshooting [link](https://github.com/alanakra/docker-php-auth/blob/main/SSL_TROUBLESHOOTING.md).
+
+Resources
+- Front-end repo (example): https://github.com/alanakra/cross-origin-client
+- Database gist: https://gist.github.com/alanakra/4227596bbb85f3745cf97bed5b35d833
