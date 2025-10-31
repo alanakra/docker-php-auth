@@ -5,7 +5,7 @@
     
     // CORS Configuration for cross domain dev w Client URL list
     $allowedOrigins = [
-        'http://demo-register-client.local:5173',
+        'https://demo-register-client.local:5173',
         'http://localhost:5173',
         'http://127.0.0.1:5173',
         'http://localhost:3000',
@@ -16,7 +16,7 @@
     if (in_array($origin, $allowedOrigins)) {
         header("Access-Control-Allow-Origin: $origin");
     } else {
-        header("Access-Control-Allow-Origin: http://demo-register-client.local:5173"); // Fallback during dev
+        header("Access-Control-Allow-Origin: https://demo-register-client.local:5173"); // Fallback during dev
     }
     
     header("Access-Control-Allow-Methods: POST, OPTIONS");
