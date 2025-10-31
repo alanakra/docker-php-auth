@@ -1,0 +1,170 @@
+# Cross-Origin Auth Backend
+
+This repository contains the **back-end** part of a project built with [**Docker**](https://www.docker.com/).  
+It is designed to communicate securely with an external **API hosted on a different origin** (domain, port, or protocol). The link of the front-end repo is [here](https://github.com/alanakra/cross-origin-auth-frontend)
+
+## Environment
+
+- **Front-end:** https://demo-register-client.local:5173  
+- **Back-end (API):** https://demo-register-server.local:8080/
+
+Prerequisites
+- Docker and Docker Compose installed
+- openssl installed (check with `openssl version`)
+- Ability to edit your OS hosts file
+- Replace `demo-register-server.local` and `127.0.0.1` with your real hostnames/IPs if required
+
+This architecture is considered **cross-site**, since both the client and server use different hostnames and ports.
+
+## Setting up Custom Domains (Localhost)
+
+To make your local development setup more realistic and modular, you can serve your apps using **custom local domains** such as:
+- `demo-register-client.local`
+- `demo-register-server.local`
+
+### 1. Edit your `hosts` file (If isn't done.)
+Map these domains to your local IP address (`127.0.0.1`).
+
+#### On Windows:
+Edit the file located at: `C:\Windows\System32\drivers\etc\hosts`
+
+Add:
+
+`127.0.0.1 demo-register-client.local`
+`127.0.0.1 demo-register-server.local`
+
+
+#### On macOS / Linux:
+Edit `/etc/hosts` (requires `sudo`):
+
+`127.0.0.1 demo-register-client.local`
+`127.0.0.1 demo-register-server.local`
+
+### 1bis. Set environments variables
+
+Add a first `.env` file at the root of the repo with the following structure:
+```
+MYSQL_ROOT_PASSWORD=root
+MYSQL_DATABASE=app_db
+MYSQL_USER=user
+MYSQL_PASSWORD=user
+```
+Theses values are for MYSQL container in `docker-compose.yml` file.
+
+Create another second `.env` file at the root of `www` folder with the following structure:
+```
+DB_HOST=mysql
+DB_USERNAME=user
+DB_PASSWORD=user
+DB_NAME=app_db
+JWT_SECRET=ADD_GENERATED_JWT_SECRET
+```
+To generate JWT secret, run on your terminal `openssl rand -base64 64` or `node -e "console.log(require('crypto').randomBytes(64).toString('hex'))` and copy the generated secret in `.env`.
+
+### 2. Enable HTTPS locally
+For the API and front-end to function properly, and for security reasons, both parties must communicate using the HTTPS protocol. If this is the case, client requests to the server may be blocked by your browser.
+
+2.1 Create a self-signed SSL certificate
+
+Linux / WSL / macOS:
+```bash
+mkdir -p ssl && cd ssl
+openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+  -keyout demo-register-server.local.key \
+  -out demo-register-server.local.crt \
+  -subj "/C=FR/ST=France/L=Paris/O=Demo/OU=IT/CN=demo-register-server.local"
+```
+
+Git Bash (MSYS) — avoid automatic path conversion
+MSYS can convert arguments that look like paths (e.g. `/C=FR`) into Windows paths. Disable conversion for the single command with:
+
+```bash
+mkdir -p ssl && cd ssl && MSYS_NO_PATHCONV=1 openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+  -keyout demo-register-server.local.key \
+  -out demo-register-server.local.crt \
+  -subj "/C=FR/ST=France/L=Paris/O=Demo/OU=IT/CN=demo-register-server.local"
+```
+
+To disable conversion for the whole session:
+```bash
+export MSYS_NO_PATHCONV=1
+# run your openssl commands afterwards
+```
+
+PowerShell (Windows)
+Use single quotes to avoid interpolation:
+```powershell
+mkdir ssl; Set-Location ssl
+openssl req -x509 -nodes -days 365 -newkey rsa:2048 `
+  -keyout demo-register-server.local.key `
+  -out demo-register-server.local.crt `
+  -subj '/C=FR/ST=France/L=Paris/O=Demo/OU=IT/CN=demo-register-server.local'
+```
+
+cmd.exe (Windows)
+```cmd
+mkdir ssl && cd ssl
+openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout demo-register-server.local.key -out demo-register-server.local.crt -subj "/C=FR/ST=France/L=Paris/O=Demo/OU=IT/CN=demo-register-server.local"
+```
+
+Recommended variant: include SAN (subjectAltName)
+Modern clients and browsers rely on subjectAltName rather than the CN. If your OpenSSL supports `-addext` (OpenSSL ≥ 1.1.1):
+
+```bash
+mkdir -p ssl && cd ssl && MSYS_NO_PATHCONV=1 openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+  -keyout demo-register-server.local.key \
+  -out demo-register-server.local.crt \
+  -subj "/C=FR/ST=France/L=Paris/O=Demo/OU=IT/CN=demo-register-server.local" \
+  -addext "subjectAltName=DNS:demo-register-server.local,IP:127.0.0.1"
+```
+
+If `-addext` is not available, use a temporary config file (`san.cnf`):
+
+```bash
+cat > san.cnf <<'EOF'
+[ req ]
+distinguished_name = req_distinguished_name
+req_extensions = v3_req
+prompt = no
+
+[ req_distinguished_name ]
+C = FR
+ST = France
+L = Paris
+O = Demo
+OU = IT
+CN = demo-register-server.local
+
+[ v3_req ]
+subjectAltName = @alt_names
+
+[ alt_names ]
+DNS.1 = demo-register-server.local
+IP.1 = 127.0.0.1
+EOF
+
+MSYS_NO_PATHCONV=1 openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+  -keyout demo-register-server.local.key \
+  -out demo-register-server.local.crt \
+  -config san.cnf -extensions v3_req
+```
+
+### 3. Create Docker image
+Run `docker build -t docker-php-auth .`
+
+### 4. Start containers
+Run `docker compose up -d`
+
+Access:
+- API: https://demo-register-server.local:8080 (or http if you configured it that way)
+- phpMyAdmin: http://demo-register-server.local:8081/
+
+### 5. Import database
+Import the following [database](https://gist.github.com/alanakra/4227596bbb85f3745cf97bed5b35d833) and import it via PhpMyAdmin.
+
+### 6. SSL Certificate Troubleshooting
+For specific issues related to opening the API endpoint link following the self-signed SSL certificate, here is a more detailed troubleshooting [link](https://github.com/alanakra/docker-php-auth/blob/main/SSL_TROUBLESHOOTING.md).
+
+Resources
+- Front-end repo (example): https://github.com/alanakra/cross-origin-client
+- Database gist: https://gist.github.com/alanakra/4227596bbb85f3745cf97bed5b35d833
