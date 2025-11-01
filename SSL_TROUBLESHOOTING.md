@@ -14,6 +14,15 @@ This error occurs because we're using self-signed SSL certificates for local dev
 1. Click "Advanced"
 2. Click "Accept the Risk and Continue"
 
+**If you got error PR_CONNECT_RESET_ERROR :**
+1. Open Firefox settings (about:preferences#privacy)
+2. Go to "Certificates" → "View Certificates"
+3. Click on "Authorities" tab
+4. Click on "Import..."
+5. Select `ssl/demo-register-server.local.crt`
+6. Tick "Trust this CA to identify websites"
+7. Restart Firefox
+
 ### Safari:
 1. Click "Show Details"
 2. Click "Visit this website"
@@ -58,9 +67,13 @@ mkcert demo-register-server.local localhost 127.0.0.1
 
 ## Testing the Configuration
 
-Test your HTTPS endpoint:
+Test your HTTPS endpoints:
 ```bash
-curl -k https://demo-register-server.local:8443
+# Test nginx (API) on port 8081
+curl -k https://demo-register-server.local:8081
+
+# Test phpMyAdmin on port 8082
+curl -k https://demo-register-server.local:8082
 ```
 
 Expected response:
