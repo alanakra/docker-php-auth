@@ -67,17 +67,23 @@
                 
                 $jwt = JWT::encode($payload, $jwt_secret, 'HS256');
                 
-                // Secured cookie configuration
-                $cookieOptions = [
-                    'expires' => time() + (24 * 60 * 60),
-                    'path' => '/',
-                    'domain' => '',
-                    'secure' => false, // Use HTTP method for development purposes TODO: Use true b4 flight
-                    'httponly' => false, // Enable for localStorage TODO: Maybe set true b4 flight
-                    'samesite' => 'None' // cross-site request for development purpose TODO: Fix b4 flight
-                ];
+                // Secured cookie configuration with Partitioned attribute for cross-site cookies
+                // Note: Partitioned is required for cross-site cookies (SameSite=None) in modern browsers
+                // The cookie is accessible in JavaScript via document.cookie (HttpOnly not set)
+                $expires = time() + (24 * 60 * 60);
                 
-                setcookie('auth_token', $jwt, $cookieOptions);
+                // For cross-site cookies (different domains), we need:
+                // - Secure (required with SameSite=None)
+                // - SameSite=None (for cross-site)
+                // - Partitioned (required by modern browsers for SameSite=None cross-site cookies)
+                // Note: Domain is NOT set - browsers handle cross-site cookies automatically
+                // The cookie will be available to the client domain that made the request
+                $cookieHeader = sprintf(
+                    'auth_token=%s; Expires=%s; Path=/; Secure; SameSite=None; Partitioned',
+                    $jwt,
+                    gmdate('D, d M Y H:i:s \G\M\T', $expires)
+                );
+                header("Set-Cookie: $cookieHeader");
                 
                 echo json_encode([
                     "success" => true,
@@ -86,6 +92,8 @@
                         "id" => $user['id'],
                         "username" => $user['username']
                     ],
+                    "jwt" => $jwt,
+                    "cookie_header" => $cookieHeader,
                     "expires_in" => 24 * 60 * 60, // 24 hours in seconds
                     "cookie_set" => true
                 ]);
